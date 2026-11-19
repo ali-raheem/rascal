@@ -1,0 +1,7 @@
+# One marker per line: LAT,LON[,SYMBOL[,LABEL]] or PLACE[,SYMBOL[,LABEL]]
+lat,lon,symbol,label
+38.9,-77.0,*,Washington
+55.75N,37.62E,*,Moscow
+Beijing,*
+Canberra,*
+-15.8,-47.9,*,Brasília

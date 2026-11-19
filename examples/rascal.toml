@@ -1,0 +1,56 @@
+# Example Rascal config. Copy to ~/.config/rascal/config.toml (loaded
+# automatically) or pass with `rascal -c FILE`. Every key is optional and
+# command-line flags override it. `rascal --print-config` shows the result.
+
+# region = "europe"            # or a list: ["france", "spain"]
+# width = 100                  # omit to fit the terminal
+# height = 40
+# aspect = 0.5                 # character cell width / height
+# projection = "equirectangular"   # or "mercator"
+style = "classic"              # classic, sea, dots, blocks, shade, braille
+# isolate = false              # hide land outside the selected regions
+# bbox = [-10.0, 35.0, 30.0, 60.0] # explicit view: west, south, east, north
+# fit = false                  # zoom to fit the markers
+# pad = 2.0                    # degrees of margin around a country/subregion
+frame = "none"                 # none, ascii, line, rounded, double, heavy
+# title = "My map"
+color = "never"                # auto, always, never
+# graticule = 30               # lat/lon lines every N degrees
+legend = false
+labels = true
+# capitals = false
+# supersample = 3              # samples per cell side
+# threshold = 0.5              # fraction of a cell that must be land
+# geojson = "my-polygons.geojson"  # relative to this file
+# markers_file = "places.txt"      # relative to this file
+
+# Command-line style marker specs.
+markers = ["London", "Tokyo,%", "40.71,-74.01,@,NYC"]
+
+[chars]                        # several characters make a pattern
+land = "#"
+other = ":"
+water = " "
+# border = "|"
+# coast = "o"
+# highlight = "@"
+# marker = "*"
+# grid = "."
+
+[colors]                       # names, bright-NAME, on-NAME, 0-255, #rrggbb, bold
+land = "green"
+water = "blue"
+marker = "bold bright-red"
+
+[highlight]                    # region selector = characters
+# brazil = "@"
+# "western europe" = "%"
+
+[[marker]]
+place = "Sydney"
+symbol = "&"
+
+[[marker]]
+lat = -54.8
+lon = -68.3
+label = "Ushuaia"

@@ -1,0 +1,17 @@
+[package]
+name = "rascal"
+version = "0.1.0"
+edition = "2024"
+description = "ASCII art world maps for the terminal"
+license = "MIT"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "wrap_help"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+terminal_size = "0.4"
+toml = "0.8"
+
+[profile.release]
+lto = true
