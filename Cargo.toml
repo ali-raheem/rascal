@@ -1,9 +1,19 @@
 [package]
-name = "rascal"
+name = "rascal-map"
 version = "0.1.0"
 edition = "2024"
-description = "ASCII art world maps for the terminal"
+description = "Draw ASCII art maps of the world, continents and countries in the terminal"
 license = "MIT"
+authors = ["Ali Raheem"]
+repository = "https://github.com/ali-raheem/rascal"
+readme = "README.md"
+keywords = ["ascii-art", "map", "world-map", "terminal", "cli"]
+categories = ["command-line-utilities", "visualization"]
+exclude = ["/scripts", "/.gitignore"]
+
+[[bin]]
+name = "rascal"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"

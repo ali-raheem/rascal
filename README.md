@@ -36,7 +36,16 @@ made it.
 Country polygons and city locations are compiled into the binary, so there is
 nothing to download at runtime.
 
-## Build
+## Install
+
+```
+cargo install rascal-map
+```
+
+This installs the `rascal` command. (The crate is called `rascal-map`
+because `rascal` was already taken on crates.io.)
+
+To build from source:
 
 ```
 cargo build --release
