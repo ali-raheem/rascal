@@ -8,7 +8,7 @@ use crate::config::{Chars, Colors, Config, OneOrMany};
 const AFTER_HELP: &str = "\
 REGIONS:
   world (default), a continent (europe, africa, asia, north-america,
-  south-america, oceania, antarctica, americas), a subregion
+  south-america, oceania, antarctica, americas, pacific), a subregion
   (western-europe, south-eastern-asia, ...), or a country by name or
   code (france, FRA, FR). Combine with commas: `rascal france,spain`.
 
@@ -25,6 +25,9 @@ EXAMPLES:
   rascal -m London -m Tokyo,% -m 40.7,-74,@,NYC --legend
   rascal --highlight brazil=@ --highlight 'argentina=%' south-america
   rascal --bbox=-10,35,30,60 -w 80 -p mercator
+  rascal --center 150                       world map centred on the Pacific
+  rascal pacific -m Tokyo -m Honolulu -m 'Los Angeles'
+  rascal --bbox 150,-50,-150,0              a view across the 180° meridian
   rascal --fit -m Paris -m Berlin -m Rome
   rascal --print-config > ~/.config/rascal/config.toml";
 
@@ -145,6 +148,10 @@ pub struct Cli {
     #[arg(short, long, value_name = "DEG")]
     pub graticule: Option<f64>,
 
+    /// Centre the view on this longitude (e.g. 150 for a Pacific-centred world)
+    #[arg(long, value_name = "LON", allow_hyphen_values = true)]
+    pub center: Option<f64>,
+
     /// ANSI colour: --color, or --color=auto|always|never [default: never]
     #[arg(long, num_args = 0..=1, require_equals = true, default_missing_value = "always", value_name = "WHEN")]
     pub color: Option<String>,
@@ -228,6 +235,7 @@ impl Cli {
             title: self.title.clone(),
             color: self.color.clone(),
             graticule: self.graticule,
+            center: self.center,
             legend: flag(self.legend),
             labels: self.no_labels.then_some(false),
             capitals: flag(self.capitals),

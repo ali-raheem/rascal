@@ -101,13 +101,50 @@ impl BBox {
         b
     }
 
-    pub fn clamped(&self, max_lat: f64) -> BBox {
+    pub fn shifted(&self, dlon: f64) -> BBox {
         BBox {
-            west: self.west.max(-180.0),
-            south: self.south.max(-max_lat),
-            east: self.east.min(180.0),
-            north: self.north.min(max_lat),
+            west: self.west + dlon,
+            east: self.east + dlon,
+            ..*self
         }
+    }
+
+    /// The copy of `o` (shifted by 0 or ±360°) closest to `self`, and its gap.
+    pub fn nearest_copy(&self, o: &BBox) -> (f64, BBox) {
+        [0.0, 360.0, -360.0]
+            .iter()
+            .map(|d| o.shifted(*d))
+            .map(|b| (self.gap(&b), b))
+            .min_by(|a, b| a.0.total_cmp(&b.0))
+            .unwrap()
+    }
+
+    /// Union with whichever copy of `o` (0 or ±360°) gives the narrowest
+    /// result, so boxes either side of the antimeridian join up across it.
+    pub fn union_wrapped(&self, o: &BBox) -> BBox {
+        [0.0, 360.0, -360.0]
+            .iter()
+            .map(|d| self.union(&o.shifted(*d)))
+            .min_by(|a, b| a.width().total_cmp(&b.width()))
+            .unwrap()
+    }
+
+    /// Clamp latitudes, limit the longitude span to 360° and bring the
+    /// west edge into [-180, 180). Views may extend past ±180°; the
+    /// renderer draws the world repeatedly to fill them.
+    pub fn clamped(&self, max_lat: f64) -> BBox {
+        let mut b = BBox {
+            south: self.south.max(-max_lat),
+            north: self.north.min(max_lat),
+            ..*self
+        };
+        if b.width() > 360.0 {
+            let c = (b.west + b.east) / 2.0;
+            b.west = c - 180.0;
+            b.east = c + 180.0;
+        }
+        let shift = ((b.west + 180.0) / 360.0).floor() * 360.0;
+        b.shifted(-shift)
     }
 }
 
@@ -372,4 +409,30 @@ fn parse_polygon(v: &Value) -> Result<Polygon> {
         })
         .collect::<Result<Vec<Ring>>>()?;
     Ok(Polygon::new(rings))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clamped_normalises_wrapped_views() {
+        let b = BBox::new(200.0, -10.0, 260.0, 10.0).clamped(90.0);
+        assert_eq!((b.west, b.east), (-160.0, -100.0));
+        let b = BBox::new(150.0, -95.0, 210.0, 95.0).clamped(85.0);
+        assert_eq!(
+            (b.west, b.east, b.south, b.north),
+            (150.0, 210.0, -85.0, 85.0)
+        );
+        let b = BBox::new(-200.0, 0.0, 200.0, 1.0).clamped(90.0);
+        assert_eq!((b.west, b.east), (-180.0, 180.0));
+    }
+
+    #[test]
+    fn union_wrapped_takes_the_short_way_round() {
+        let fiji_west = BBox::new(177.0, -19.0, 180.0, -16.0);
+        let fiji_east = BBox::new(-180.0, -19.0, -178.0, -16.0);
+        let u = fiji_west.union_wrapped(&fiji_east);
+        assert_eq!((u.west, u.east), (177.0, 182.0));
+    }
 }

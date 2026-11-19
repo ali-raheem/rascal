@@ -83,7 +83,7 @@ fn draw(cfg: &Config, countries: &[Country], places: &[Place]) -> Result<()> {
         }
         region_view = Some(match region_view {
             None => (s.view, s.preset),
-            Some((v, p)) => (v.union(&s.view), p && s.preset),
+            Some((v, p)) => (v.union_wrapped(&s.view), p && s.preset),
         });
     }
 
@@ -138,17 +138,16 @@ fn draw(cfg: &Config, countries: &[Country], places: &[Place]) -> Result<()> {
     // Viewport
     let fit = cfg.fit == Some(true) && marks.len() > n_capitals;
     let (bbox, preset) = if let Some([w, s, e, n]) = cfg.bbox {
-        if w >= e || s >= n {
-            bail!("--bbox must be WEST,SOUTH,EAST,NORTH with west < east and south < north");
+        if s >= n || w == e {
+            bail!("--bbox must be WEST,SOUTH,EAST,NORTH with south < north");
         }
+        // West > east means the box crosses the antimeridian.
+        let e = if w > e { e + 360.0 } else { e };
         (BBox::new(w, s, e, n), true)
     } else if fit {
-        let mut b = BBox::empty();
-        for m in &marks[n_capitals..] {
-            b.add_point(m.lon, m.lat);
-        }
+        let b = points_bbox(marks[n_capitals..].iter().map(|m| (m.lon, m.lat)));
         match region_view {
-            Some((v, _)) => (b.union(&v), false),
+            Some((v, _)) => (b.union_wrapped(&v), false),
             None => (b, false),
         }
     } else {
@@ -156,8 +155,30 @@ fn draw(cfg: &Config, countries: &[Country], places: &[Place]) -> Result<()> {
     };
     let mut bbox = bbox;
     if !preset || cfg.pad.is_some() {
-        let auto = (0.08 * bbox.width().max(bbox.height())).max(0.5);
-        bbox = bbox.padded(cfg.pad.unwrap_or(auto));
+        bbox = match cfg.pad {
+            Some(p) => bbox.padded(p),
+            None => {
+                // Pad each axis by its own extent, so wide countries like
+                // Russia don't get a band of empty rows above and below.
+                let big = bbox.width().max(bbox.height());
+                let pad = |d: f64| (0.08 * d).max(0.03 * big).max(0.5);
+                let (px, py) = (pad(bbox.width()), pad(bbox.height()));
+                BBox::new(
+                    bbox.west - px,
+                    bbox.south - py,
+                    bbox.east + px,
+                    bbox.north + py,
+                )
+            }
+        };
+    }
+    if let Some(lon) = cfg.center {
+        if !(-180.0..=360.0).contains(&lon) {
+            bail!("--center must be a longitude between -180 and 180");
+        }
+        let half = bbox.width().min(360.0) / 2.0;
+        bbox.west = lon - half;
+        bbox.east = lon + half;
     }
     let bbox = bbox.with_min_span(1.0).clamped(proj.max_lat());
     if bbox.width() <= 0.0 || bbox.height() <= 0.0 {
@@ -368,6 +389,38 @@ fn list(kind: ListKind, countries: &[Country], places: &[Place], regions: &[Stri
         }
     }
     Ok(())
+}
+
+/// Bounding box of points, taking the shorter way round the globe: markers
+/// in Tokyo and Los Angeles frame the Pacific, not Eurasia and the Atlantic.
+fn points_bbox(points: impl Iterator<Item = (f64, f64)>) -> BBox {
+    let mut b = BBox::empty();
+    let mut lons = Vec::new();
+    for (lon, lat) in points {
+        b.add_point(lon, lat);
+        lons.push(lon.rem_euclid(360.0));
+    }
+    if lons.len() < 2 {
+        return b;
+    }
+    lons.sort_by(f64::total_cmp);
+    // The view starts just after the widest empty stretch of longitude.
+    let n = lons.len();
+    let (gap_end, gap) = (0..n)
+        .map(|i| {
+            let next = if i + 1 < n {
+                lons[i + 1]
+            } else {
+                lons[0] + 360.0
+            };
+            ((i + 1) % n, next - lons[i])
+        })
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .unwrap();
+    let west = lons[gap_end];
+    b.west = west;
+    b.east = west + 360.0 - gap;
+    b
 }
 
 fn slug(s: &str) -> String {

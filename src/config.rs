@@ -126,6 +126,8 @@ pub struct Config {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graticule: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub center: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub legend: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<bool>,
@@ -215,7 +217,7 @@ impl Config {
             self.height = None;
         }
         overlay!(self, top; width, height, aspect, projection, style, isolate, bbox, fit, pad,
-                 frame, title, color, graticule, legend, labels, capitals, supersample, threshold,
+                 frame, title, color, graticule, center, legend, labels, capitals, supersample, threshold,
                  geojson, markers_file);
         overlay!(self.chars, top.chars; land, other, water, border, coast, highlight, marker, grid);
         overlay!(self.colors, top.colors; land, other, water, border, coast, highlight, grid,

@@ -30,6 +30,7 @@ A region can be any of:
 |------------|------------------------------------------------------------------------------|
 | world      | `world` (the default)                                                        |
 | continent  | `europe`, `africa`, `asia`, `north-america`, `south-america`, `oceania`, `antarctica`, `americas` |
+| ocean      | `pacific` (East Asia and Australia to the Americas, across the 180° line) |
 | subregion  | `western-europe`, `south-eastern-asia`, `caribbean` (`rascal --list subregions`) |
 | country    | `france`, `FRA`, `FR`, `"united kingdom"`, `uk` (`rascal --list countries`)  |
 
@@ -40,6 +41,20 @@ zooms to frame them, and draws other land in view with the "other" character
 When zooming to a country, far-flung territories are left out of the frame
 (France shows Corsica but not French Guiana). Use `--bbox W,S,E,N` to set the
 view yourself.
+
+### Across the antimeridian
+
+Maps can span the 180° line, so the Pacific can sit in the middle:
+
+```
+rascal --center 150                  # world map centred on 150°E
+rascal pacific -m Tokyo -m Honolulu  # Pacific Ocean view
+rascal --bbox 150,-50,-150,0         # west > east: the box crosses 180°
+rascal --fit -m Tokyo -m Auckland -m Honolulu   # fits the short way round
+```
+
+Countries that straddle the line, such as Russia and Fiji, are framed as one
+piece. `--center LON` moves any view so it is centred on that longitude.
 
 ### Characters
 
@@ -135,8 +150,6 @@ win a cell still gets one, so Monaco and Malta don't disappear.
 
 ## Limitations
 
-- Views cannot cross the antimeridian (180°), so a Pacific-centred map is
-  not possible yet.
 - Labels go on the map itself, to the right of the marker or to its left
   when there is no room. A label that would overlap another marker or label
   is dropped.

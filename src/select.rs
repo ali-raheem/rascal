@@ -17,6 +17,14 @@ pub const WORLD_VIEW: BBox = BBox {
 /// Hand-tuned continent viewports. Clustering by polygon would let e.g.
 /// Russia drag "Europe" out to the Pacific, or French Guiana pull it to
 /// South America.
+/// East Asia and Australia on the left, the Americas on the right.
+pub const PACIFIC_VIEW: BBox = BBox {
+    west: 110.0,
+    south: -55.0,
+    east: 295.0,
+    north: 66.0,
+};
+
 const CONTINENT_VIEWS: &[(&str, BBox)] = &[
     (
         "africa",
@@ -68,7 +76,7 @@ const CONTINENT_VIEWS: &[(&str, BBox)] = &[
         BBox {
             west: 110.0,
             south: -50.0,
-            east: 180.0,
+            east: 192.0,
             north: 0.0,
         },
     ),
@@ -121,6 +129,13 @@ pub fn resolve(countries: &[Country], selector: &str) -> Result<Selection> {
         return Ok(Selection {
             indices: (0..countries.len()).collect(),
             view: WORLD_VIEW,
+            preset: true,
+        });
+    }
+    if matches!(n.as_str(), "pacific" | "pacificocean") {
+        return Ok(Selection {
+            indices: (0..countries.len()).collect(),
+            view: PACIFIC_VIEW,
             preset: true,
         });
     }
@@ -239,9 +254,15 @@ pub fn cluster_view(countries: &[Country], indices: &[usize]) -> BBox {
         let tol = 2.0 + 0.05 * view.width().max(view.height());
         let mut changed = false;
         for (i, (area, b)) in polys.iter().enumerate() {
-            if !used[i] && *area >= significant && view.gap(b) <= tol {
+            if used[i] || *area < significant {
+                continue;
+            }
+            // Compare against the copy of the polygon nearest the cluster,
+            // so e.g. Chukotka (at -170°) joins the rest of Russia.
+            let (gap, b) = view.nearest_copy(b);
+            if gap <= tol {
                 used[i] = true;
-                view = view.union(b);
+                view = view.union(&b);
                 changed = true;
             }
         }
@@ -252,8 +273,9 @@ pub fn cluster_view(countries: &[Country], indices: &[usize]) -> BBox {
     // Small islands just off the coast still belong in the picture.
     let core = view;
     for (i, (_, b)) in polys.iter().enumerate() {
-        if !used[i] && core.gap(b) <= 1.0 {
-            view = view.union(b);
+        let (gap, b) = core.nearest_copy(b);
+        if !used[i] && gap <= 1.0 {
+            view = view.union(&b);
         }
     }
     view
@@ -287,5 +309,23 @@ mod tests {
             v.west > -6.0 && v.east < 10.0 && v.south > 41.0 && v.north < 52.0,
             "{v:?}"
         );
+    }
+
+    #[test]
+    fn country_view_joins_across_the_antimeridian() {
+        let cs = builtin_countries().unwrap();
+        // Chukotka lies at -170°; it should extend Russia eastwards past 180°.
+        let v = resolve(&cs, "russia").unwrap().view;
+        assert!(v.west > 15.0 && v.east > 185.0 && v.east < 200.0, "{v:?}");
+        let v = resolve(&cs, "fiji").unwrap().view;
+        assert!(v.width() < 10.0, "{v:?}");
+    }
+
+    #[test]
+    fn pacific_view_crosses_the_antimeridian() {
+        let cs = builtin_countries().unwrap();
+        let s = resolve(&cs, "pacific").unwrap();
+        assert!(s.preset && s.view.west < 180.0 && s.view.east > 180.0);
+        assert_eq!(s.indices.len(), cs.len());
     }
 }

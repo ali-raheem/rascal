@@ -91,13 +91,13 @@ impl View {
     }
 
     pub fn cell(&self, lon: f64, lat: f64) -> Option<(usize, usize)> {
-        if lat < self.bbox.south
-            || lat > self.bbox.north
-            || lon < self.bbox.west
-            || lon > self.bbox.east
-        {
+        if lat < self.bbox.south || lat > self.bbox.north {
             return None;
         }
+        // The view may extend past ±180°, so try the wrapped longitudes too.
+        let lon = [lon, lon + 360.0, lon - 360.0]
+            .into_iter()
+            .find(|l| (self.bbox.west..=self.bbox.east).contains(l))?;
         let (c, r) = self.project(lon, lat);
         let c = (c.floor() as isize).clamp(0, self.w as isize - 1) as usize;
         let r = (r.floor() as isize).clamp(0, self.h as isize - 1) as usize;
@@ -154,19 +154,25 @@ pub fn rasterize(
     let mut xs: Vec<f64> = Vec::new();
     for &ci in order {
         let country = &countries[ci];
-        if !country.bbox.intersects(&view.bbox) {
-            continue;
-        }
-        for poly in &country.polygons {
-            if !poly.bbox.intersects(&view.bbox) {
-                continue;
-            }
+        // A view crossing the antimeridian sees some land through a ±360°
+        // copy of the world, so draw each polygon at every offset in view.
+        let copies = [-360.0, 0.0, 360.0]
+            .into_iter()
+            .filter(|&dx| country.bbox.shifted(dx).intersects(&view.bbox))
+            .flat_map(|dx| country.polygons.iter().map(move |p| (p, dx)))
+            .filter(|(p, dx)| p.bbox.shifted(*dx).intersects(&view.bbox));
+        for (poly, dx) in copies {
             edges.clear();
             let (mut ymin, mut ymax) = (f64::INFINITY, f64::NEG_INFINITY);
             for ring in &poly.rings {
                 let pts: Vec<(f64, f64)> = ring
                     .iter()
-                    .map(|p| ((p[0] - view.x0) * kx, (view.y1 - view.proj.y(p[1])) * ky))
+                    .map(|p| {
+                        (
+                            (p[0] + dx - view.x0) * kx,
+                            (view.y1 - view.proj.y(p[1])) * ky,
+                        )
+                    })
                     .collect();
                 for i in 0..pts.len() {
                     let a = pts[i];
@@ -721,5 +727,25 @@ mod tests {
         assert_eq!(canvas.place_markers(&view, &[m], true), 0);
         let text = to_text(&canvas, Frame::None, None, None);
         assert_eq!(text, "              Far *\n");
+    }
+
+    #[test]
+    fn draws_across_the_antimeridian() {
+        // A box straddling 180°, stored as two halves the way Natural Earth does.
+        let mut c = square("A", 178.0, 0.0, 180.0, 2.0);
+        let east = square("A", -180.0, 0.0, -178.0, 2.0);
+        c.polygons.extend(east.polygons);
+        c.bbox = c.bbox.union(&east.bbox);
+        let view = View::new(
+            BBox::new(176.0, 0.0, 184.0, 2.0),
+            Projection::Equirectangular,
+            8,
+            2,
+        );
+        let g = rasterize(&[c], &[0], &[], &view, 2, 0.5);
+        let row: Vec<bool> = g.cells[..8].iter().map(|c| c.is_some()).collect();
+        assert_eq!(row, [false, false, true, true, true, true, false, false]);
+        // A marker at -179° lands just east of the seam.
+        assert_eq!(view.cell(-179.0, 1.5), Some((5, 0)));
     }
 }

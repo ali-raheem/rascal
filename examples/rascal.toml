@@ -10,6 +10,8 @@
 style = "classic"              # classic, sea, dots, blocks, shade, braille
 # isolate = false              # hide land outside the selected regions
 # bbox = [-10.0, 35.0, 30.0, 60.0] # explicit view: west, south, east, north
+#                              # (west > east crosses the 180° meridian)
+# center = 150                 # centre the view on this longitude
 # fit = false                  # zoom to fit the markers
 # pad = 2.0                    # degrees of margin around a country/subregion
 frame = "none"                 # none, ascii, line, rounded, double, heavy
