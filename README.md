@@ -187,3 +187,8 @@ win a cell still gets one, so Monaco and Malta don't disappear.
   is dropped.
 - Wide characters such as CJK and most emoji take two cells and will break
   the alignment.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The map data in `data/` is derived from
+Natural Earth and is in the public domain.
