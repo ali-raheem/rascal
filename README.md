@@ -3,8 +3,35 @@
 ASCII art maps of the world, continents and countries, for the terminal.
 
 ```
-$ rascal europe -w 60 -m London -m 'Paris,@' -m 41.9,12.5,X,Rome
+$ rascal europe -w 80 --border '|' -m London -m 'Paris,@' -m 41.9,12.5,X,Rome
+ :::
+:                                                |||||||||###||####
+                                             |||######||#####||############    #
+   #  ######                               #|##########|######|#####      ######
+    #######                              #||########    ######||################
+                                    #####||######    ########|||################
+                                  ########|######    ###|||||###################
+                                   ##### |#######       ||||####################
+                      ####                ######     || ||||||||################
+                      #####           ||   |#        ||#|||####||###############
+                  ##|#   ###          ###### #########||########|||#############
+                 ###    ####* London#######||||########||||||||||#||||##########
+                       #|     ##|||||#####||#|||||||||||#############|||||######
+                        #  ####@ Paris|||||||##|||||||||||||||##########||######
+                          #########||||||||#|||||||||######|||#####||## ########
+                           #########|###### #|##|||#||||||||||#    ##   ########
+                   ||##    |||||#####   ####   |##|||||####||             ##||||
+                   #|###########          X Rome   ||||###|::     :::       ||||
+                  ##|########         ##      ##   |###    :::::::::::::::::::||
+                  #|########                         ##    :::::::::::||||||||||
+                     ||        ::::::|:::                     :: :::  :::::|::::
+                     :::::|::::::::::|:::                             ::::|:::::
 ```
+
+More in [`examples/maps`](examples/maps/README.md): world maps in several
+styles, a Pacific-centred world, Mercator with a graticule, highlighted
+countries, isolated outlines and framed maps, each with the command that
+made it.
 
 Country polygons and city locations are compiled into the binary, so there is
 nothing to download at runtime.
@@ -122,6 +149,11 @@ continent and subregion are read from the usual Natural Earth property names
 (`NAME`/`name`, `ADM0_A3`/`ISO_A3`, `CONTINENT`, `SUBREGION`), so regions and
 highlights work the same way. Use this for more detail (e.g. Natural Earth
 1:10m) or for maps that aren't countries at all, such as provinces or states.
+
+## Example maps
+
+`scripts/gen_examples.sh` rebuilds `examples/maps/` from the current binary.
+Run it after changing the renderer or the data.
 
 ## Data
 
